@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronRight, Flame, Zap, Timer, Target, Users } from 'lucide-react';
+import { Check, ChevronRight, Flame, Zap, Timer, Target, Users, Search, Star } from 'lucide-react';
 import type { ExerciseConfig } from '@/lib/exercises';
 import { EXERCISES, EXERCISE_CATEGORIES, getExercisesByCategory } from '@/lib/exercises';
 
@@ -25,10 +26,12 @@ function ExerciseCard({
   exercise,
   isSelected,
   onSelect,
+  isNew,
 }: {
   exercise: ExerciseConfig;
   isSelected: boolean;
   onSelect: () => void;
+  isNew?: boolean;
 }) {
   return (
     <motion.div
@@ -38,10 +41,10 @@ function ExerciseCard({
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
       <Card
-        className={`cursor-pointer transition-all duration-300 overflow-hidden ${
+        className={`cursor-pointer transition-all duration-300 overflow-hidden group ${
           isSelected
             ? 'border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-lg shadow-emerald-500/10'
-            : 'border border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-md'
+            : 'border border-gray-200/80 dark:border-gray-800/80 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md hover:shadow-emerald-500/5'
         }`}
         onClick={onSelect}
       >
@@ -50,8 +53,8 @@ function ExerciseCard({
             {/* Icon */}
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 transition-all duration-300 ${
               isSelected
-                ? 'bg-emerald-100 dark:bg-emerald-900/50 scale-110'
-                : 'bg-gray-100 dark:bg-gray-800'
+                ? 'bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900/50 dark:to-emerald-800/40 scale-110 shadow-sm'
+                : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/80'
             }`}>
               {exercise.icon}
             </div>
@@ -61,6 +64,9 @@ function ExerciseCard({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <h3 className="font-semibold text-sm truncate">{exercise.name}</h3>
+                  {isNew && (
+                    <Badge className="text-[9px] h-4 px-1.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white border-0">NEW</Badge>
+                  )}
                   {isSelected && (
                     <motion.div
                       initial={{ scale: 0 }}
@@ -149,8 +155,27 @@ export default function ExerciseSelector({
   onSelect,
 }: ExerciseSelectorProps) {
   const [category, setCategory] = React.useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
 
-  const filteredExercises = getExercisesByCategory(category);
+  const filteredExercises = useMemo(() => {
+    let exercises = getExercisesByCategory(category);
+
+    if (difficultyFilter !== 'all') {
+      exercises = exercises.filter(e => e.difficulty === difficultyFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      exercises = exercises.filter(e =>
+        e.name.toLowerCase().includes(q) ||
+        e.description.toLowerCase().includes(q) ||
+        e.targetMuscles.some(m => m.toLowerCase().includes(q))
+      );
+    }
+
+    return exercises;
+  }, [category, difficultyFilter, searchQuery]);
 
   return (
     <div className="space-y-4">
@@ -158,43 +183,110 @@ export default function ExerciseSelector({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Choose Exercise</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{filteredExercises.length} exercises available</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{filteredExercises.length} exercise{filteredExercises.length !== 1 ? 's' : ''} available</p>
         </div>
       </div>
 
-      {/* Category filters */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-        {EXERCISE_CATEGORIES.map((cat) => (
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Search exercises, muscles..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900/50 border-gray-200/80 dark:border-gray-800/80 focus-visible:ring-emerald-500/30"
+        />
+        {searchQuery && (
           <button
-            key={cat.id}
-            onClick={() => setCategory(cat.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 ${
-              category === cat.id
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-                : 'bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Category + Difficulty filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1">
+          {EXERCISE_CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setCategory(cat.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+                category === cat.id
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                  : 'bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              <span>{cat.icon}</span>
+              <span>{cat.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Difficulty filter pills */}
+      <div className="flex gap-1.5">
+        {[
+          { id: 'all' as const, label: 'All Levels', icon: <Star className="w-3 h-3" /> },
+          { id: 'beginner' as const, label: 'Beginner', icon: <Zap className="w-3 h-3 text-emerald-400" /> },
+          { id: 'intermediate' as const, label: 'Intermediate', icon: <Zap className="w-3 h-3 text-amber-400" /> },
+          { id: 'advanced' as const, label: 'Advanced', icon: <Zap className="w-3 h-3 text-red-400" /> },
+        ].map(d => (
+          <button
+            key={d.id}
+            onClick={() => setDifficultyFilter(d.id)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 ${
+              difficultyFilter === d.id
+                ? 'bg-foreground/10 dark:bg-foreground/10 text-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
-            <span>{cat.icon}</span>
-            <span>{cat.name}</span>
+            {d.icon}
+            {d.label}
           </button>
         ))}
       </div>
 
+      {/* No results state */}
+      {filteredExercises.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground font-medium">No exercises found</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">Try adjusting your search or filters</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-3 text-xs"
+            onClick={() => { setSearchQuery(''); setDifficultyFilter('all'); setCategory('all'); }}
+          >
+            Clear all filters
+          </Button>
+        </motion.div>
+      )}
+
       {/* Exercise list */}
-      <ScrollArea className="h-[420px] pr-2">
-        <div className="space-y-2">
-          <AnimatePresence mode="popLayout">
-            {filteredExercises.map((exercise) => (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                isSelected={selectedExercise?.id === exercise.id}
-                onSelect={() => onSelect(exercise)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-      </ScrollArea>
+      {filteredExercises.length > 0 && (
+        <ScrollArea className="h-[360px] pr-2">
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {filteredExercises.map((exercise) => (
+                <ExerciseCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  isSelected={selectedExercise?.id === exercise.id}
+                  onSelect={() => onSelect(exercise)}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        </ScrollArea>
+      )}
 
       {/* Start button */}
       <AnimatePresence>
@@ -206,9 +298,10 @@ export default function ExerciseSelector({
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >
             <Button
-              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold h-12 rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200 hover:shadow-emerald-500/40"
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold h-12 rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200 hover:shadow-emerald-500/40 hover:scale-[1.01]"
               onClick={() => onSelect(selectedExercise)}
             >
+              <span className="text-lg mr-2">{selectedExercise.icon}</span>
               Start {selectedExercise.name} Workout
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>

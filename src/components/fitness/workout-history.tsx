@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
   Calendar, Dumbbell, Flame, TrendingUp, Trophy, Clock,
-  BarChart3, Target, Sparkles, Trash2, Shield, Zap,
+  BarChart3, Target, Sparkles, Trash2, Shield, Zap, FlameKindling,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,6 +28,7 @@ export interface WorkoutRecord {
 interface WorkoutHistoryProps {
   workouts: WorkoutRecord[];
   onDelete?: (id: string) => void;
+  streak?: { current: number; best: number };
 }
 
 function formatDuration(seconds: number): string {
@@ -104,7 +105,7 @@ function StatCard({
   );
 }
 
-export default function WorkoutHistory({ workouts, onDelete }: WorkoutHistoryProps) {
+export default function WorkoutHistory({ workouts, onDelete, streak }: WorkoutHistoryProps) {
   const totalWorkouts = workouts.length;
   const totalReps = workouts.reduce((sum, w) => sum + w.totalReps, 0);
   const totalCalories = workouts.reduce((sum, w) => sum + w.calories, 0);
@@ -115,6 +116,31 @@ export default function WorkoutHistory({ workouts, onDelete }: WorkoutHistoryPro
 
   return (
     <div className="space-y-5">
+      {/* Streak banner */}
+      {streak && streak.current > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white overflow-hidden relative">
+            <div className="absolute inset-0 opacity-[0.08]" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+              backgroundSize: '16px 16px',
+            }} />
+            <CardContent className="p-4 relative z-10 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                <FlameKindling className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-lg">{streak.current} Day Streak!</p>
+                <p className="text-orange-100 text-xs">Keep going! Best: {streak.best} days</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Stats Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <StatCard icon={Trophy} iconColor="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" value={totalReps.toLocaleString()} label="Total Reps" delay={0} />

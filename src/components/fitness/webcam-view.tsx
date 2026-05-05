@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Camera, CameraOff, Maximize2, Minimize2, RefreshCw, MonitorSmartphone } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Landmark } from '@/lib/pose-detection';
 import { drawSkeleton } from '@/lib/pose-detection';
 import type { ExerciseConfig } from '@/lib/exercises';
@@ -35,8 +36,20 @@ export default function WebcamView({
   const [loadingStep, setLoadingStep] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState('');
   const [fps, setFps] = useState(0);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const fpsCounterRef = useRef<number[]>([]);
+  const onPoseDetectedRef = useRef(onPoseDetected);
+  const isActiveRef = useRef(isActive);
+  const exerciseRef = useRef(exercise);
+  const showCountdownRef = useRef(false);
+
+  // Keep refs up to date
+  useEffect(() => { onPoseDetectedRef.current = onPoseDetected; }, [onPoseDetected]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+  useEffect(() => { exerciseRef.current = exercise; }, [exercise]);
+  useEffect(() => { showCountdownRef.current = showCountdown; }, [showCountdown]);
 
   const loadingSteps = [
     'Initializing pose engine...',
@@ -48,7 +61,6 @@ export default function WebcamView({
 
   const initPose = useCallback(async () => {
     try {
-      // Dynamic import to avoid Turbopack chunk issues
       setLoadingStep(1);
       setLoadingProgress(loadingSteps[0]);
 
@@ -68,18 +80,32 @@ export default function WebcamView({
       setLoadingStep(3);
       setLoadingProgress(loadingSteps[2]);
 
-      const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task',
-          delegate: 'GPU',
-        },
-        runningMode: 'VIDEO',
-        numPoses: 1,
-        minPoseDetectionConfidence: 0.5,
-        minPosePresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
+      // Try GPU first, fallback to CPU if GPU fails
+      const modelAssetPath =
+        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
+
+      let poseLandmarker;
+      try {
+        poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: { modelAssetPath, delegate: 'GPU' },
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+      } catch {
+        // GPU not available, fallback to CPU
+        console.warn('GPU delegate not available, falling back to CPU');
+        poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: { modelAssetPath, delegate: 'CPU' },
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+      }
 
       poseLandmarkerRef.current = poseLandmarker;
       return poseLandmarker;
@@ -131,6 +157,10 @@ export default function WebcamView({
 
       setLoadingStep(5);
       setLoadingProgress(loadingSteps[4]);
+
+      // Show countdown after camera starts
+      setShowCountdown(true);
+      setCountdown(3);
 
       // Start the detection loop
       const detectLoop = () => {
@@ -186,16 +216,17 @@ export default function WebcamView({
 
                   // Build highlight set for current exercise joints
                   let highlightIndices: Set<number> | undefined;
-                  if (exercise) {
+                  const currentExercise = exerciseRef.current;
+                  if (currentExercise) {
                     highlightIndices = new Set([
-                      exercise.landmarks.first,
-                      exercise.landmarks.mid,
-                      exercise.landmarks.end,
+                      currentExercise.landmarks.first,
+                      currentExercise.landmarks.mid,
+                      currentExercise.landmarks.end,
                     ]);
-                    if (exercise.bilateral && exercise.secondaryLandmarks) {
-                      highlightIndices.add(exercise.secondaryLandmarks.first);
-                      highlightIndices.add(exercise.secondaryLandmarks.mid);
-                      highlightIndices.add(exercise.secondaryLandmarks.end);
+                    if (currentExercise.bilateral && currentExercise.secondaryLandmarks) {
+                      highlightIndices.add(currentExercise.secondaryLandmarks.first);
+                      highlightIndices.add(currentExercise.secondaryLandmarks.mid);
+                      highlightIndices.add(currentExercise.secondaryLandmarks.end);
                     }
                   }
 
@@ -204,7 +235,10 @@ export default function WebcamView({
                     highlightIndices,
                   });
 
-                  onPoseDetected(landmarks);
+                  // Only send pose data if workout is active and countdown is done
+                  if (isActiveRef.current && !showCountdownRef.current) {
+                    onPoseDetectedRef.current(landmarks);
+                  }
                 }
               }
             }
@@ -232,7 +266,22 @@ export default function WebcamView({
       setLoading(false);
       setLoadingProgress('');
     }
-  }, [initPose, exercise, onPoseDetected, onFrame]);
+  }, [initPose, onFrame]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!showCountdown || countdown <= 0) return;
+    const timer = setTimeout(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [showCountdown, countdown]);
+
+  useEffect(() => {
+    if (countdown === 0 && showCountdown) {
+      setShowCountdown(false);
+    }
+  }, [countdown, showCountdown]);
 
   const stopCamera = useCallback(() => {
     cameraOnRef.current = false;
@@ -254,6 +303,8 @@ export default function WebcamView({
     lastVideoTimeRef.current = -1;
     setCameraOn(false);
     setFps(0);
+    setShowCountdown(false);
+    setCountdown(0);
   }, []);
 
   // Cleanup on unmount
@@ -335,6 +386,51 @@ export default function WebcamView({
         </div>
       )}
 
+      {/* Countdown overlay */}
+      <AnimatePresence>
+        {showCountdown && countdown > 0 && cameraOn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.5 }}
+            className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+          >
+            <motion.div
+              key={countdown}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              className="text-center"
+            >
+              <div className="w-28 h-28 rounded-full bg-emerald-500/20 backdrop-blur-md border-2 border-emerald-400/50 flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/30">
+                <span className="text-7xl font-black text-white">{countdown}</span>
+              </div>
+              <p className="text-white/80 text-sm font-medium mt-4 uppercase tracking-widest">
+                Get Ready
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GO! overlay */}
+      <AnimatePresence>
+        {showCountdown === false && countdown === 0 && cameraOn && !loading && (
+          <motion.div
+            initial={{ opacity: 1, scale: 0.5 }}
+            animate={{ opacity: 0, scale: 1.5 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+          >
+            <div className="text-center">
+              <p className="text-6xl font-black text-emerald-400 drop-shadow-lg">GO!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Error overlay (camera was on but error occurred) */}
       {error && cameraOn && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
@@ -358,8 +454,8 @@ export default function WebcamView({
       {cameraOn && !error && (
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
           <Badge className="bg-black/60 text-white border-0 backdrop-blur-md text-xs font-medium pointer-events-auto shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1.5" />
-            LIVE
+            <span className={`w-2 h-2 rounded-full mr-1.5 ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            {isActive ? 'LIVE' : 'PAUSED'}
           </Badge>
           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto">
             {fps > 0 && (
