@@ -28,6 +28,34 @@ Stage Summary:
 - Dev server running successfully on port 3000, lint clean
 
 ---
+Task ID: 2
+Agent: Cron Review Agent
+Task: Fix ChunkLoadError with MediaPipe pose detection, QA testing, and UI improvements
+
+Work Log:
+- User reported ChunkLoadError: `Failed to load chunk /_next/static/chunks/node_modules_%40mediapipe_pose_pose_*.js`
+- Root cause: `@mediapipe/pose` (legacy API) has incompatible WASM/chunk loading with Next.js 16 Turbopack
+- Fix: Replaced `@mediapipe/pose` + `@mediapipe/camera_utils` + `@mediapipe/drawing_utils` with `@mediapipe/tasks-vision`
+- Rewrote `webcam-view.tsx` to use `PoseLandmarker` from `@mediapipe/tasks-vision`
+  - Uses `FilesetResolver.forVisionTasks()` to load WASM from CDN
+  - Uses `PoseLandmarker.createFromOptions()` with GPU delegate
+  - Uses `detectForVideo()` for per-frame pose detection in VIDEO mode
+  - Model: `pose_landmarker_lite/float16` from Google Cloud Storage
+- Rewrote `pose-detection.ts`: Added custom `drawSkeleton()` canvas drawing function (replaces `@mediapipe/drawing_utils`)
+- Improved workout-history.tsx: Better empty state, exercise-specific colors, cleaner layout
+- Performed QA testing with agent-browser (screenshots saved to download/)
+- VLM analysis identified UI improvements: removed duplicate title, enhanced empty state, better stat cards
+
+Stage Summary:
+- Removed: `@mediapipe/pose`, `@mediapipe/camera_utils`, `@mediapipe/drawing_utils`
+- Added: `@mediapipe/tasks-vision@0.10.35`
+- Files changed:
+  - `src/components/fitness/webcam-view.tsx` - Complete rewrite for new API
+  - `src/lib/pose-detection.ts` - Added drawSkeleton(), updated POSE_CONNECTIONS types
+  - `src/components/fitness/workout-history.tsx` - UI improvements
+- Verified: Page loads with no ChunkLoadError, tasks-vision bundle loads correctly
+
+---
 ## Current Project Status
 
 **Status:** Working - Application is running and functional

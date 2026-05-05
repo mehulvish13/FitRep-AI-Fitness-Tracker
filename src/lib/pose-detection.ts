@@ -1,5 +1,6 @@
 // Pose detection engine - angle calculation and pose analysis
 // Ported from the original angles.py to TypeScript for browser use
+// Updated for @mediapipe/tasks-vision PoseLandmarker API
 
 export interface Landmark {
   x: number;
@@ -58,7 +59,7 @@ export function isLandmarkVisible(landmark: Landmark, threshold: number = 0.5): 
 }
 
 /**
- * Get specific landmarks by their indices from MediaPipe pose results
+ * Get specific landmarks by their indices from pose results
  */
 export function getLandmarks(
   landmarks: Landmark[],
@@ -115,7 +116,7 @@ export function getAverageAngle(
  */
 export function analyzePosture(landmarks: Landmark[]): {
   isUpright: boolean;
-  shoulderLevel: number; // 0 = level, higher = more tilted
+  shoulderLevel: number;
   hipLevel: number;
 } {
   if (!landmarks || landmarks.length < 33) {
@@ -127,9 +128,7 @@ export function analyzePosture(landmarks: Landmark[]): {
   const leftHip = landmarks[23];
   const rightHip = landmarks[24];
 
-  // Calculate shoulder tilt
   const shoulderLevel = Math.abs(leftShoulder.y - rightShoulder.y);
-  // Calculate hip tilt
   const hipLevel = Math.abs(leftHip.y - rightHip.y);
 
   return {
@@ -140,27 +139,120 @@ export function analyzePosture(landmarks: Landmark[]): {
 }
 
 /**
- * MediaPipe Pose landmark connections for drawing skeleton
+ * Pose landmark connections for drawing skeleton on canvas.
+ * Each pair is [startLandmarkIndex, endLandmarkIndex].
+ * Compatible with MediaPipe Pose Landmarker 33-landmark model.
  */
-export const POSE_CONNECTIONS = [
+export const POSE_CONNECTIONS: [number, number][] = [
+  // Torso
+  [11, 12], [11, 23], [12, 24], [23, 24],
+  // Left arm
+  [11, 13], [13, 15],
+  // Right arm
+  [12, 14], [14, 16],
+  // Left leg
+  [23, 25], [25, 27],
+  // Right leg
+  [24, 26], [26, 28],
+  // Left foot
+  [27, 29], [29, 31],
+  // Right foot
+  [28, 30], [30, 32],
   // Face
-  [10, 11], // left face
-  [11, 12], // right face
-  [11, 13], [13, 15], // left arm
-  [12, 14], [14, 16], // right arm
-  [11, 23], // left torso
-  [12, 24], // right torso
-  [23, 24], // hips
-  [23, 25], [25, 27], // left leg
-  [24, 26], [26, 28], // right leg
-  [27, 29], [29, 31], // left foot
-  [28, 30], [30, 32], // right foot
-  [15, 17], [15, 19], [15, 21], // left hand
-  [16, 18], [16, 20], [16, 22], // right hand
-  [0, 1], [1, 2], [2, 3], [3, 7], // left face detail
-  [0, 4], [4, 5], [5, 6], [6, 8], // right face detail
-  [9, 10], // forehead
-] as const;
+  [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10],
+  // Hands
+  [15, 17], [15, 19], [15, 21], [16, 18], [16, 20], [16, 22],
+];
+
+/**
+ * Draw the skeleton on a canvas context.
+ */
+export function drawSkeleton(
+  ctx: CanvasRenderingContext2D,
+  landmarks: Landmark[],
+  options?: {
+    connections?: [number, number][];
+    connectionColor?: string;
+    connectionWidth?: number;
+    landmarkColor?: string;
+    landmarkRadius?: number;
+    highlightIndices?: Set<number>;
+    highlightColor?: string;
+    highlightRadius?: number;
+    mirror?: boolean;
+  }
+) {
+  const {
+    connections = POSE_CONNECTIONS,
+    connectionColor = '#22c55e',
+    connectionWidth = 3,
+    landmarkColor = '#22c55e',
+    landmarkRadius = 3,
+    highlightIndices,
+    highlightColor = '#ef4444',
+    highlightRadius = 7,
+    mirror = true,
+  } = options || {};
+
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+
+  const toCanvas = (lm: Landmark) => ({
+    x: mirror ? (1 - lm.x) * w : lm.x * w,
+    y: lm.y * h,
+    v: lm.visibility || 0,
+  });
+
+  // Draw connections
+  ctx.strokeStyle = connectionColor;
+  ctx.lineWidth = connectionWidth;
+  ctx.lineCap = 'round';
+
+  for (const [a, b] of connections) {
+    const lmA = landmarks[a];
+    const lmB = landmarks[b];
+    if (!lmA || !lmB) continue;
+    if ((lmA.visibility || 0) < 0.4 || (lmB.visibility || 0) < 0.4) continue;
+
+    const pA = toCanvas(lmA);
+    const pB = toCanvas(lmB);
+
+    ctx.beginPath();
+    ctx.moveTo(pA.x, pA.y);
+    ctx.lineTo(pB.x, pB.y);
+    ctx.stroke();
+  }
+
+  // Draw landmarks
+  for (let i = 0; i < landmarks.length; i++) {
+    const lm = landmarks[i];
+    if (!lm || (lm.visibility || 0) < 0.4) continue;
+
+    const p = toCanvas(lm);
+    const isHighlight = highlightIndices?.has(i);
+
+    if (isHighlight) {
+      // Glow effect for highlighted landmarks
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, highlightRadius + 4, 0, 2 * Math.PI);
+      ctx.fillStyle = highlightColor + '33'; // semi-transparent
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, highlightRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = highlightColor;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, landmarkRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = landmarkColor;
+      ctx.fill();
+    }
+  }
+}
 
 /**
  * Key landmark indices for skeleton highlighting
