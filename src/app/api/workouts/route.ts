@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const workouts = await db.workout.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 100,
     });
     return NextResponse.json(workouts);
   } catch (error) {
@@ -19,7 +19,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { exerciseId, exerciseName, totalReps, totalSets, duration, calories, setsData } = body;
+    const { exerciseId, exerciseName, totalReps, totalSets, duration, calories, setsData, avgFormScore } = body;
 
     const workout = await db.workout.create({
       data: {
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
         duration: duration || 0,
         calories: calories || 0,
         setsData: setsData ? JSON.stringify(setsData) : '[]',
+        avgFormScore: avgFormScore || 0,
       },
     });
 
@@ -37,5 +38,22 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Failed to save workout:', error);
     return NextResponse.json({ error: 'Failed to save workout' }, { status: 500 });
+  }
+}
+
+// DELETE /api/workouts - Delete a workout by id
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Missing workout id' }, { status: 400 });
+    }
+
+    await db.workout.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete workout:', error);
+    return NextResponse.json({ error: 'Failed to delete workout' }, { status: 500 });
   }
 }

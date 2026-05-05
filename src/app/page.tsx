@@ -2,35 +2,20 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import {
-  Dumbbell,
-  History,
-  Play,
-  Square,
-  RotateCcw,
-  Trophy,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Volume2,
-  VolumeX,
-  Info,
-  Activity,
-  Zap,
-  Heart,
+  Dumbbell, History, Play, Square, Pause, RotateCcw,
+  Trophy, ChevronLeft, ChevronRight, Volume2, VolumeX,
+  Info, Activity, Zap, Heart, Timer, Target, Flame, Shield, Sparkles,
 } from 'lucide-react';
-
 import WebcamView from '@/components/fitness/webcam-view';
 import ExerciseSelector from '@/components/fitness/exercise-selector';
 import RepCounterDisplay from '@/components/fitness/rep-counter-display';
 import WorkoutHistory, { type WorkoutRecord } from '@/components/fitness/workout-history';
-
 import { EXERCISES, type ExerciseConfig } from '@/lib/exercises';
 import type { Landmark } from '@/lib/pose-detection';
 import type { RepCounterState } from '@/lib/rep-counter';
@@ -41,7 +26,13 @@ import {
   resetCounter,
 } from '@/lib/rep-counter';
 
-type AppView = 'select' | 'workout' | 'history' | 'settings';
+type AppView = 'select' | 'workout' | 'history';
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
 export default function FitnessRepCounter() {
   const [view, setView] = useState<AppView>('select');
@@ -53,13 +44,17 @@ export default function FitnessRepCounter() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [workouts, setWorkouts] = useState<WorkoutRecord[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  // Rest timer
+  const [restTimer, setRestTimer] = useState(0);
+  const [isResting, setIsResting] = useState(false);
+  const [restDuration, setRestDuration] = useState(30);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const landmarksRef = useRef<Landmark[] | null>(null);
   const lastProcessedRef = useRef<number>(0);
-
-  // Audio context for rep sounds
   const audioContextRef = useRef<AudioContext | null>(null);
+  const prevRepsRef = useRef(0);
 
   // Fetch workout history
   useEffect(() => {
@@ -69,9 +64,9 @@ export default function FitnessRepCounter() {
       .catch(() => {});
   }, []);
 
-  // Timer for active workout
+  // Main workout timer
   useEffect(() => {
-    if (isWorkoutActive) {
+    if (isWorkoutActive && !isResting) {
       timerRef.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -79,92 +74,111 @@ export default function FitnessRepCounter() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isWorkoutActive]);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isWorkoutActive, isResting]);
 
-  // Play rep count sound
-  const playRepSound = useCallback(() => {
+  // Rest timer
+  useEffect(() => {
+    if (isResting && restTimer > 0) {
+      restTimerRef.current = setInterval(() => {
+        setRestTimer(prev => {
+          if (prev <= 1) {
+            setIsResting(false);
+            setIsWorkoutActive(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => { if (restTimerRef.current) clearInterval(restTimerRef.current); };
+  }, [isResting, restTimer]);
+
+  // Play beep sound
+  const playSound = useCallback((freq: number = 880, duration: number = 0.12) => {
     if (!soundEnabled) return;
     try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
+      if (!audioContextRef.current) audioContextRef.current = new AudioContext();
       const ctx = audioContextRef.current;
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      oscillator.frequency.value = 880;
-      oscillator.type = 'sine';
-      gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.15);
-    } catch {
-      // Ignore audio errors
-    }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
+    } catch { /* ignore */ }
   }, [soundEnabled]);
 
   // Handle pose detection results
   const handlePoseDetected = useCallback((landmarks: Landmark[]) => {
     landmarksRef.current = landmarks;
-
     if (!selectedExercise || !isWorkoutActive) return;
 
-    // Throttle to ~15fps for smoother rep counting
     const now = Date.now();
-    if (now - lastProcessedRef.current < 66) return;
+    if (now - lastProcessedRef.current < 66) return; // ~15fps throttle
     lastProcessedRef.current = now;
 
-    const prevState = counterState;
-    const newState = updateRepCounter(prevState, landmarks, selectedExercise);
+    const newState = updateRepCounter(counterState, landmarks, selectedExercise);
     setCounterState(newState);
 
     // Play sound on rep count
-    if (newState.reps > prevState.reps) {
-      playRepSound();
+    if (newState.reps > prevRepsRef.current) {
+      playSound(880, 0.12);
+      // Play double beep on target reached
+      if (newState.currentSetReps === targetReps) {
+        setTimeout(() => playSound(1100, 0.2), 150);
+      }
     }
-  }, [selectedExercise, isWorkoutActive, counterState, playRepSound]);
+    prevRepsRef.current = newState.reps;
+  }, [selectedExercise, isWorkoutActive, counterState, playSound, targetReps]);
 
-  // Handle video frame (not used currently but required by WebcamView)
-  const handleFrame = useCallback((_video: HTMLVideoElement) => {
-    // Can be used for additional video processing
-  }, []);
+  const handleFrame = useCallback((_video: HTMLVideoElement) => {}, []);
 
   // Start workout
   const startWorkout = useCallback((exercise: ExerciseConfig) => {
     setSelectedExercise(exercise);
     setCounterState(createInitialCounterState());
+    prevRepsRef.current = 0;
     setElapsedTime(0);
     setIsWorkoutActive(true);
+    setIsResting(false);
+    setRestTimer(0);
     setView('workout');
   }, []);
 
   // Stop workout
   const stopWorkout = useCallback(() => {
     setIsWorkoutActive(false);
+    setIsResting(false);
     setView('select');
   }, []);
 
-  // Complete set
-  const handleCompleteSet = useCallback(async () => {
+  // Complete set → trigger rest timer
+  const handleCompleteSet = useCallback(() => {
     if (counterState.currentSetReps === 0) return;
-    
     const newState = completeSet(counterState);
     setCounterState(newState);
-  }, [counterState]);
+    prevRepsRef.current = 0;
+
+    // Start rest timer
+    setIsWorkoutActive(false);
+    setIsResting(true);
+    setRestTimer(restDuration);
+    playSound(660, 0.15);
+  }, [counterState, restDuration, playSound]);
 
   // Finish workout and save
   const finishWorkout = useCallback(async () => {
     if (!selectedExercise) return;
-
     setIsSaving(true);
     try {
       const totalReps = counterState.sets.reduce((sum, s) => sum + s, 0) + counterState.currentSetReps;
       const totalSets = counterState.sets.length + (counterState.currentSetReps > 0 ? 1 : 0);
-      const setsData = counterState.currentSetReps > 0 
+      const setsData = counterState.currentSetReps > 0
         ? [...counterState.sets, counterState.currentSetReps]
         : counterState.sets;
 
@@ -179,6 +193,7 @@ export default function FitnessRepCounter() {
           duration: elapsedTime,
           calories: counterState.calories,
           setsData,
+          avgFormScore: counterState.formScore,
         }),
       });
 
@@ -191,56 +206,70 @@ export default function FitnessRepCounter() {
     } finally {
       setIsSaving(false);
       setIsWorkoutActive(false);
+      setIsResting(false);
       setSelectedExercise(null);
       setCounterState(createInitialCounterState());
+      prevRepsRef.current = 0;
       setElapsedTime(0);
       setView('select');
     }
   }, [selectedExercise, counterState, elapsedTime]);
 
-  // Reset counter
+  // Delete workout
+  const handleDeleteWorkout = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/workouts?id=${id}`, { method: 'DELETE' });
+      setWorkouts(prev => prev.filter(w => w.id !== id));
+    } catch { /* ignore */ }
+  }, []);
+
   const handleReset = useCallback(() => {
     setCounterState(resetCounter());
+    prevRepsRef.current = 0;
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md shadow-emerald-600/20">
               <Dumbbell className="w-4 h-4 text-white" />
             </div>
-            <h1 className="font-bold text-lg">FitRep Counter</h1>
-            <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+            <h1 className="font-bold text-lg tracking-tight">FitRep Counter</h1>
+            <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-medium">
               AI Powered
             </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8"
               onClick={() => setSoundEnabled(!soundEnabled)}
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
             </Button>
             <Button
               variant={view === 'history' ? 'default' : 'ghost'}
               size="sm"
-              className={view === 'history' ? 'bg-emerald-600 text-white' : ''}
-              onClick={() => { setView(view === 'history' ? 'select' : 'history'); }}
+              className={`rounded-lg ${
+                view === 'history'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : ''
+              }`}
+              onClick={() => setView(view === 'history' ? 'select' : 'history')}
             >
-              <History className="w-4 h-4 mr-1" />
+              <History className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">History</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-6">
         <AnimatePresence mode="wait">
           {/* Exercise Selection View */}
           {view === 'select' && (
@@ -249,22 +278,25 @@ export default function FitnessRepCounter() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.25 }}
             >
-              {/* Hero Section */}
+              {/* Hero */}
               <div className="mb-6">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-                  Track Your <span className="text-emerald-600">Reps</span> with AI
-                </h2>
-                <p className="text-muted-foreground">
-                  Select an exercise, position yourself in the camera, and let AI count your reps in real-time.
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                    Track Your <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">Reps</span> with AI
+                  </h2>
+                  <Sparkles className="w-6 h-6 text-emerald-500" />
+                </div>
+                <p className="text-muted-foreground text-sm sm:text-base max-w-lg">
+                  Select an exercise, position yourself in the camera, and let AI count your reps in real-time with form feedback.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Exercise Selector */}
                 <div className="lg:col-span-2">
-                  <Card>
+                  <Card className="shadow-sm">
                     <CardContent className="p-4 sm:p-6">
                       <ExerciseSelector
                         selectedExercise={selectedExercise}
@@ -274,71 +306,80 @@ export default function FitnessRepCounter() {
                   </Card>
                 </div>
 
-                {/* Quick Stats Sidebar */}
+                {/* Sidebar */}
                 <div className="space-y-4">
-                  <Card>
-                    <CardHeader className="pb-2">
+                  {/* Quick Stats */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2 px-4 pt-4">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-500" />
                         Quick Stats
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Total Workouts</span>
-                        <span className="font-bold">{workouts.length}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Total Reps</span>
-                        <span className="font-bold">{workouts.reduce((s, w) => s + w.totalReps, 0)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Calories Burned</span>
-                        <span className="font-bold">{Math.round(workouts.reduce((s, w) => s + w.calories, 0))}</span>
-                      </div>
+                    <CardContent className="px-4 pb-4 space-y-2.5">
+                      {[
+                        { label: 'Total Workouts', value: workouts.length, icon: Trophy, color: 'text-emerald-500' },
+                        { label: 'Total Reps', value: workouts.reduce((s, w) => s + w.totalReps, 0), icon: Target, color: 'text-sky-500' },
+                        { label: 'Calories Burned', value: Math.round(workouts.reduce((s, w) => s + w.calories, 0)), icon: Flame, color: 'text-orange-500' },
+                      ].map((stat, i) => (
+                        <React.Fragment key={stat.label}>
+                          {i > 0 && <Separator />}
+                          <div className="flex items-center justify-between py-0.5">
+                            <div className="flex items-center gap-2">
+                              <stat.icon className={`w-3.5 h-3.5 ${stat.color}`} />
+                              <span className="text-sm text-muted-foreground">{stat.label}</span>
+                            </div>
+                            <span className="font-semibold text-sm tabular-nums">{stat.value.toLocaleString()}</span>
+                          </div>
+                        </React.Fragment>
+                      ))}
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-2">
+                  {/* How It Works */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2 px-4 pt-4">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Info className="w-4 h-4 text-sky-500" />
                         How It Works
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex gap-2 text-sm">
-                        <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                        <span className="text-muted-foreground">Choose your exercise</span>
-                      </div>
-                      <div className="flex gap-2 text-sm">
-                        <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                        <span className="text-muted-foreground">Allow camera access</span>
-                      </div>
-                      <div className="flex gap-2 text-sm">
-                        <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                        <span className="text-muted-foreground">AI detects your pose</span>
-                      </div>
-                      <div className="flex gap-2 text-sm">
-                        <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-                        <span className="text-muted-foreground">Reps counted automatically</span>
-                      </div>
+                    <CardContent className="px-4 pb-4 space-y-2.5">
+                      {[
+                        { step: 1, text: 'Choose your exercise' },
+                        { step: 2, text: 'Allow camera access' },
+                        { step: 3, text: 'AI detects your pose' },
+                        { step: 4, text: 'Reps counted automatically' },
+                      ].map(item => (
+                        <div key={item.step} className="flex items-center gap-2.5">
+                          <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                            {item.step}
+                          </span>
+                          <span className="text-sm text-muted-foreground">{item.text}</span>
+                        </div>
+                      ))}
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-2">
+                  {/* Features */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2 px-4 pt-4">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Heart className="w-4 h-4 text-red-500" />
                         Features
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-1">
-                      {['Real-time pose detection', 'Multi-exercise support', 'Set & rep tracking', 'Calorie estimation', 'Workout history'].map((f, i) => (
+                    <CardContent className="px-4 pb-4 space-y-2">
+                      {[
+                        'Real-time pose detection',
+                        'Form quality scoring',
+                        'Rest timer between sets',
+                        'Set & rep tracking',
+                        'Calorie estimation',
+                        'Workout history',
+                      ].map((f, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Zap className="w-3 h-3 text-emerald-500" />
+                          <Zap className="w-3 h-3 text-emerald-500 flex-shrink-0" />
                           {f}
                         </div>
                       ))}
@@ -356,7 +397,7 @@ export default function FitnessRepCounter() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.25 }}
             >
               {/* Workout Header */}
               <div className="flex items-center justify-between mb-4">
@@ -364,40 +405,85 @@ export default function FitnessRepCounter() {
                   variant="ghost"
                   size="sm"
                   onClick={stopWorkout}
-                  className="text-muted-foreground"
+                  className="text-muted-foreground -ml-2"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-sm">
+                  <Badge variant="secondary" className="text-sm font-medium">
                     {selectedExercise.icon} {selectedExercise.name}
                   </Badge>
-                  {!isWorkoutActive && (
+                  {!isWorkoutActive && !isResting && (
                     <Button
                       size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm"
                       onClick={() => setIsWorkoutActive(true)}
                     >
                       <Play className="w-3 h-3 mr-1" />
-                      Start Counting
+                      Start
                     </Button>
                   )}
                   {isWorkoutActive && (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-red-300 text-red-600"
+                      className="border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg"
                       onClick={() => setIsWorkoutActive(false)}
                     >
-                      <Square className="w-3 h-3 mr-1" />
+                      <Pause className="w-3 h-3 mr-1" />
                       Pause
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+              {/* Rest Timer Overlay */}
+              <AnimatePresence>
+                {isResting && restTimer > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                  >
+                    <Card className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 max-w-sm mx-4 text-center border-0">
+                      <div className="mb-4">
+                        <Timer className="w-12 h-12 text-emerald-500 mx-auto" />
+                      </div>
+                      <p className="text-sm text-muted-foreground uppercase tracking-wider font-medium mb-2">Rest Time</p>
+                      <p className="text-6xl font-black text-foreground tabular-nums tracking-tight">{restTimer}</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Next set: Set {counterState.sets.length + 2}
+                      </p>
+                      <div className="flex gap-2 mt-6 justify-center">
+                        <Button
+                          variant="outline"
+                          className="rounded-xl"
+                          onClick={() => {
+                            setIsResting(false);
+                            setIsWorkoutActive(true);
+                            setRestTimer(0);
+                          }}
+                        >
+                          <Play className="w-3.5 h-3.5 mr-1" />
+                          Skip Rest
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-xl"
+                          onClick={() => setRestTimer(prev => prev + 15)}
+                        >
+                          +15s
+                        </Button>
+                      </div>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
                 {/* Camera View */}
                 <div className="lg:col-span-3">
                   <WebcamView
@@ -407,32 +493,44 @@ export default function FitnessRepCounter() {
                     onFrame={handleFrame}
                   />
 
-                  {/* Target Reps Control */}
-                  <div className="mt-3 flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">Target reps:</span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setTargetReps(Math.max(1, targetReps - 5))}
-                      >
-                        <ChevronLeft className="w-3 h-3" />
-                      </Button>
+                  {/* Target Reps & Rest Duration Controls */}
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-medium">Target reps:</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg"
+                          onClick={() => setTargetReps(Math.max(1, targetReps - 5))}
+                        >
+                          <ChevronLeft className="w-3 h-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={targetReps}
+                          onChange={(e) => setTargetReps(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-14 h-7 text-center text-sm rounded-lg"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg"
+                          onClick={() => setTargetReps(targetReps + 5)}
+                        >
+                          <ChevronRight className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-medium">Rest:</span>
                       <Input
                         type="number"
-                        value={targetReps}
-                        onChange={(e) => setTargetReps(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 h-7 text-center text-sm"
+                        value={restDuration}
+                        onChange={(e) => setRestDuration(Math.max(5, parseInt(e.target.value) || 30))}
+                        className="w-14 h-7 text-center text-sm rounded-lg"
                       />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setTargetReps(targetReps + 5)}
-                      >
-                        <ChevronRight className="w-3 h-3" />
-                      </Button>
+                      <span className="text-xs text-muted-foreground">sec</span>
                     </div>
                   </div>
                 </div>
@@ -450,7 +548,7 @@ export default function FitnessRepCounter() {
 
                   {/* Finish Workout Button */}
                   <Button
-                    className="w-full mt-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold"
+                    className="w-full mt-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold h-11 rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200 hover:shadow-emerald-500/40"
                     onClick={finishWorkout}
                     disabled={isSaving}
                   >
@@ -473,25 +571,25 @@ export default function FitnessRepCounter() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.25 }}
             >
               <div className="flex items-center gap-3 mb-6">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setView('select')}
-                  className="text-muted-foreground"
+                  className="text-muted-foreground -ml-2"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
-                <h2 className="text-2xl font-bold">Workout History</h2>
+                <h2 className="text-2xl font-bold tracking-tight">Workout History</h2>
               </div>
 
               <div className="max-w-2xl mx-auto">
-                <Card>
+                <Card className="shadow-sm">
                   <CardContent className="p-4 sm:p-6">
-                    <WorkoutHistory workouts={workouts} />
+                    <WorkoutHistory workouts={workouts} onDelete={handleDeleteWorkout} />
                   </CardContent>
                 </Card>
               </div>
@@ -501,16 +599,20 @@ export default function FitnessRepCounter() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 mt-auto">
+      <footer className="border-t border-gray-200/60 dark:border-gray-800/60 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-            <p>FitRep Counter — AI-Powered Exercise Rep Counter</p>
+            <div className="flex items-center gap-1.5">
+              <Dumbbell className="w-3 h-3" />
+              <span className="font-medium">FitRep Counter</span>
+              <span>— AI-Powered Exercise Rep Counter</span>
+            </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <Activity className="w-3 h-3" />
+                <Shield className="w-3 h-3" />
                 MediaPipe Pose Detection
               </span>
-              <span>|</span>
+              <span className="text-gray-300 dark:text-gray-700">|</span>
               <span>Built with Next.js</span>
             </div>
           </div>

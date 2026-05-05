@@ -9,18 +9,14 @@ export interface ExerciseConfig {
   category: 'arms' | 'legs' | 'chest' | 'back' | 'core' | 'shoulders';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   primaryJoints: string[];
-  // Landmark indices from MediaPipe Pose (33 landmarks)
   landmarks: {
-    first: number;   // First joint landmark
-    mid: number;     // Middle joint landmark (the joint being measured)
-    end: number;     // End joint landmark
+    first: number;
+    mid: number;
+    end: number;
   };
-  // Angle thresholds for rep counting
-  downAngle: number;  // Angle when exercise is in "down" position
-  upAngle: number;    // Angle when exercise is in "up" position
-  // Whether to check both sides (left and right)
+  downAngle: number;
+  upAngle: number;
   bilateral: boolean;
-  // Secondary landmarks for the other side (if bilateral)
   secondaryLandmarks?: {
     first: number;
     mid: number;
@@ -28,6 +24,8 @@ export interface ExerciseConfig {
   };
   tips: string[];
   caloriesPerRep: number;
+  estimatedDuration: string; // estimated time per set
+  targetMuscles: string[];
 }
 
 export const EXERCISES: ExerciseConfig[] = [
@@ -39,21 +37,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'arms',
     difficulty: 'beginner',
     primaryJoints: ['Right Elbow', 'Left Elbow'],
-    landmarks: {
-      first: 12, // right shoulder
-      mid: 14,   // right elbow
-      end: 16,   // right wrist
-    },
-    secondaryLandmarks: {
-      first: 11, // left shoulder
-      mid: 13,   // left elbow
-      end: 15,   // left wrist
-    },
-    downAngle: 160, // arm straight
-    upAngle: 40,    // arm fully curled
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 160,
+    upAngle: 40,
     bilateral: true,
-    tips: ['Keep elbows close to your torso', 'Don\'t swing your body', 'Control the movement'],
+    tips: ['Keep elbows close to torso', "Don't swing your body", 'Control the movement', 'Squeeze at the top'],
     caloriesPerRep: 0.5,
+    estimatedDuration: '30s',
+    targetMuscles: ['Biceps', 'Forearms'],
   },
   {
     id: 'squat',
@@ -63,21 +55,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'legs',
     difficulty: 'beginner',
     primaryJoints: ['Right Knee', 'Left Knee'],
-    landmarks: {
-      first: 24, // right hip
-      mid: 26,   // right knee
-      end: 28,   // right ankle
-    },
-    secondaryLandmarks: {
-      first: 23, // left hip
-      mid: 25,   // left knee
-      end: 27,   // left ankle
-    },
-    downAngle: 90,  // knees bent
-    upAngle: 170,   // legs straight
+    landmarks: { first: 24, mid: 26, end: 28 },
+    secondaryLandmarks: { first: 23, mid: 25, end: 27 },
+    downAngle: 90,
+    upAngle: 170,
     bilateral: true,
-    tips: ['Keep chest up', 'Knees behind toes', 'Weight in heels'],
+    tips: ['Keep chest up', 'Knees behind toes', 'Weight in heels', 'Drive through midfoot'],
     caloriesPerRep: 0.8,
+    estimatedDuration: '45s',
+    targetMuscles: ['Quads', 'Glutes', 'Hamstrings'],
   },
   {
     id: 'shoulder-press',
@@ -87,21 +73,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'shoulders',
     difficulty: 'intermediate',
     primaryJoints: ['Right Elbow', 'Left Elbow'],
-    landmarks: {
-      first: 12, // right shoulder
-      mid: 14,   // right elbow
-      end: 16,   // right wrist
-    },
-    secondaryLandmarks: {
-      first: 11, // left shoulder
-      mid: 13,   // left elbow
-      end: 15,   // left wrist
-    },
-    downAngle: 90,   // arms at 90 degrees
-    upAngle: 160,    // arms extended overhead
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 90,
+    upAngle: 160,
     bilateral: true,
-    tips: ['Keep core engaged', 'Don\'t lock elbows', 'Press directly overhead'],
+    tips: ['Keep core engaged', "Don't lock elbows", 'Press directly overhead', 'Breathe out on press'],
     caloriesPerRep: 0.7,
+    estimatedDuration: '40s',
+    targetMuscles: ['Deltoids', 'Triceps', 'Upper Chest'],
   },
   {
     id: 'lateral-raise',
@@ -111,21 +91,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'shoulders',
     difficulty: 'beginner',
     primaryJoints: ['Right Elbow', 'Left Elbow'],
-    landmarks: {
-      first: 12, // right shoulder
-      mid: 14,   // right elbow
-      end: 16,   // right wrist
-    },
-    secondaryLandmarks: {
-      first: 11, // left shoulder
-      mid: 13,   // left elbow
-      end: 15,   // left wrist
-    },
-    downAngle: 10,   // arms at sides
-    upAngle: 90,     // arms parallel to ground
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 10,
+    upAngle: 90,
     bilateral: true,
-    tips: ['Slight bend in elbows', 'Lead with pinkies', 'Control the descent'],
+    tips: ['Slight bend in elbows', 'Lead with pinkies', 'Control the descent', 'Raise to shoulder height'],
     caloriesPerRep: 0.4,
+    estimatedDuration: '35s',
+    targetMuscles: ['Lateral Deltoids', 'Traps'],
   },
   {
     id: 'tricep-extension',
@@ -135,21 +109,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'arms',
     difficulty: 'beginner',
     primaryJoints: ['Right Elbow', 'Left Elbow'],
-    landmarks: {
-      first: 12, // right shoulder
-      mid: 14,   // right elbow
-      end: 16,   // right wrist
-    },
-    secondaryLandmarks: {
-      first: 11, // left shoulder
-      mid: 13,   // left elbow
-      end: 15,   // left wrist
-    },
-    downAngle: 40,   // arms curled
-    upAngle: 160,    // arms extended
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 40,
+    upAngle: 160,
     bilateral: true,
-    tips: ['Keep elbows pointing forward', 'Squeeze at the top', 'Don\'t flare elbows'],
+    tips: ['Keep elbows pointing forward', 'Squeeze at the top', "Don't flare elbows", 'Full extension'],
     caloriesPerRep: 0.5,
+    estimatedDuration: '30s',
+    targetMuscles: ['Triceps', 'Shoulders'],
   },
   {
     id: 'front-raise',
@@ -159,21 +127,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'shoulders',
     difficulty: 'intermediate',
     primaryJoints: ['Right Elbow', 'Left Elbow'],
-    landmarks: {
-      first: 24, // right hip
-      mid: 14,   // right elbow
-      end: 12,   // right shoulder
-    },
-    secondaryLandmarks: {
-      first: 23, // left hip
-      mid: 13,   // left elbow
-      end: 11,   // left shoulder
-    },
-    downAngle: 10,   // arms at sides
-    upAngle: 170,    // arms raised to front
+    landmarks: { first: 24, mid: 14, end: 12 },
+    secondaryLandmarks: { first: 23, mid: 13, end: 11 },
+    downAngle: 10,
+    upAngle: 170,
     bilateral: true,
-    tips: ['Keep arms straight', 'Don\'t swing', 'Slow controlled movement'],
+    tips: ['Keep arms straight', "Don't swing", 'Slow controlled movement', 'Palms facing down'],
     caloriesPerRep: 0.4,
+    estimatedDuration: '35s',
+    targetMuscles: ['Front Deltoids', 'Upper Chest'],
   },
   {
     id: 'lunges',
@@ -183,21 +145,15 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'legs',
     difficulty: 'intermediate',
     primaryJoints: ['Right Knee', 'Left Knee'],
-    landmarks: {
-      first: 24, // right hip
-      mid: 26,   // right knee
-      end: 28,   // right ankle
-    },
-    secondaryLandmarks: {
-      first: 23, // left hip
-      mid: 25,   // left knee
-      end: 27,   // left ankle
-    },
-    downAngle: 100, // knee bent in lunge
-    upAngle: 170,   // leg straight
+    landmarks: { first: 24, mid: 26, end: 28 },
+    secondaryLandmarks: { first: 23, mid: 25, end: 27 },
+    downAngle: 100,
+    upAngle: 170,
     bilateral: true,
-    tips: ['Keep torso upright', 'Front knee at 90 degrees', 'Step far enough'],
+    tips: ['Keep torso upright', 'Front knee at 90 degrees', 'Step far enough', 'Push back to start'],
     caloriesPerRep: 0.7,
+    estimatedDuration: '50s',
+    targetMuscles: ['Quads', 'Glutes', 'Hamstrings'],
   },
   {
     id: 'push-ups',
@@ -207,31 +163,60 @@ export const EXERCISES: ExerciseConfig[] = [
     category: 'chest',
     difficulty: 'beginner',
     primaryJoints: ['Right Elbow', 'Left Elbow'],
-    landmarks: {
-      first: 12, // right shoulder
-      mid: 14,   // right elbow
-      end: 16,   // right wrist
-    },
-    secondaryLandmarks: {
-      first: 11, // left shoulder
-      mid: 13,   // left elbow
-      end: 15,   // left wrist
-    },
-    downAngle: 90,   // arms bent
-    upAngle: 160,    // arms straight
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 90,
+    upAngle: 160,
     bilateral: true,
-    tips: ['Keep body straight', 'Core engaged', 'Full range of motion'],
+    tips: ['Keep body straight', 'Core engaged', 'Full range of motion', 'Elbows at 45 degrees'],
     caloriesPerRep: 1.0,
+    estimatedDuration: '40s',
+    targetMuscles: ['Chest', 'Triceps', 'Shoulders'],
+  },
+  {
+    id: 'wall-sit',
+    name: 'Wall Sit',
+    description: 'Lean against a wall with knees at 90 degrees and hold the position.',
+    icon: '🧱',
+    category: 'legs',
+    difficulty: 'beginner',
+    primaryJoints: ['Right Knee', 'Left Knee'],
+    landmarks: { first: 24, mid: 26, end: 28 },
+    secondaryLandmarks: { first: 23, mid: 25, end: 27 },
+    downAngle: 85,
+    upAngle: 100,
+    bilateral: true,
+    tips: ['Back flat against wall', 'Thighs parallel to floor', 'Keep core tight', 'Breathe steadily'],
+    caloriesPerRep: 1.2,
+    estimatedDuration: '60s',
+    targetMuscles: ['Quads', 'Glutes', 'Calves'],
+  },
+  {
+    id: 'jumping-jacks',
+    name: 'Jumping Jacks',
+    description: 'Jump while spreading legs and raising arms overhead simultaneously.',
+    icon: '⭐',
+    category: 'core',
+    difficulty: 'beginner',
+    primaryJoints: ['Right Elbow', 'Left Elbow'],
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 10,
+    upAngle: 160,
+    bilateral: true,
+    tips: ['Land softly on toes', 'Full arm extension', 'Keep rhythm', 'Engage core'],
+    caloriesPerRep: 0.6,
+    estimatedDuration: '30s',
+    targetMuscles: ['Full Body', 'Cardio', 'Shoulders'],
   },
 ];
 
 export const EXERCISE_CATEGORIES = [
-  { id: 'all', name: 'All Exercises', icon: '🎯' },
+  { id: 'all', name: 'All', icon: '🎯' },
   { id: 'arms', name: 'Arms', icon: '💪' },
   { id: 'legs', name: 'Legs', icon: '🦵' },
   { id: 'chest', name: 'Chest', icon: '🏋️' },
   { id: 'shoulders', name: 'Shoulders', icon: '🤸' },
-  { id: 'back', name: 'Back', icon: '🔙' },
   { id: 'core', name: 'Core', icon: '🧘' },
 ] as const;
 

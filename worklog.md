@@ -1,93 +1,90 @@
-# FitRep Counter - Worklog
+# FitRep Counter — Project Worklog
 
----
-Task ID: 1
-Agent: Main Agent
-Task: Build a comprehensive AI-powered Fitness Exercise Rep Counter web application
-
-Work Log:
-- Analyzed the uploaded zip file (newfinalM2.zip) which contained a Python/React project for pose-based exercise rep counting
-- Extracted the core logic from angles.py (angle calculation between 3 body landmarks)
-- Identified the project architecture: Python backend with MediaPipe + React frontend
-- Designed and built a full Next.js 16 web application that brings the concept to the browser
-
-Stage Summary:
-- Installed @mediapipe/pose, @mediapipe/camera_utils, @mediapipe/drawing_utils
-- Created core logic files:
-  - src/lib/exercises.ts - 8 exercise definitions (bicep curl, squat, shoulder press, lateral raise, tricep extension, front raise, lunges, push-ups) with landmark configs and angle thresholds
-  - src/lib/pose-detection.ts - TypeScript port of angles.py with angle calculation, posture analysis, and skeleton connection definitions
-  - src/lib/rep-counter.ts - State machine based rep counting with idle/down/up states, set management, calorie tracking
-- Created UI components:
-  - src/components/fitness/webcam-view.tsx - Camera component with MediaPipe Pose integration and skeleton overlay
-  - src/components/fitness/exercise-selector.tsx - Exercise browser with category filtering, difficulty badges, and tips
-  - src/components/fitness/rep-counter-display.tsx - Real-time rep counter with animated counter, set tracking, angle display, calorie estimation
-  - src/components/fitness/workout-history.tsx - Workout history with stats overview and detailed session list
-- Created API route: src/app/api/workouts/route.ts (GET/POST) with Prisma SQLite persistence
-- Updated Prisma schema with Workout model
-- Main page (src/app/page.tsx) with 3 views: exercise selection, active workout, history
-- Dev server running successfully on port 3000, lint clean
-
----
-Task ID: 2
-Agent: Cron Review Agent
-Task: Fix ChunkLoadError with MediaPipe pose detection, QA testing, and UI improvements
-
-Work Log:
-- User reported ChunkLoadError: `Failed to load chunk /_next/static/chunks/node_modules_%40mediapipe_pose_pose_*.js`
-- Root cause: `@mediapipe/pose` (legacy API) has incompatible WASM/chunk loading with Next.js 16 Turbopack
-- Fix: Replaced `@mediapipe/pose` + `@mediapipe/camera_utils` + `@mediapipe/drawing_utils` with `@mediapipe/tasks-vision`
-- Rewrote `webcam-view.tsx` to use `PoseLandmarker` from `@mediapipe/tasks-vision`
-  - Uses `FilesetResolver.forVisionTasks()` to load WASM from CDN
-  - Uses `PoseLandmarker.createFromOptions()` with GPU delegate
-  - Uses `detectForVideo()` for per-frame pose detection in VIDEO mode
-  - Model: `pose_landmarker_lite/float16` from Google Cloud Storage
-- Rewrote `pose-detection.ts`: Added custom `drawSkeleton()` canvas drawing function (replaces `@mediapipe/drawing_utils`)
-- Improved workout-history.tsx: Better empty state, exercise-specific colors, cleaner layout
-- Performed QA testing with agent-browser (screenshots saved to download/)
-- VLM analysis identified UI improvements: removed duplicate title, enhanced empty state, better stat cards
-
-Stage Summary:
-- Removed: `@mediapipe/pose`, `@mediapipe/camera_utils`, `@mediapipe/drawing_utils`
-- Added: `@mediapipe/tasks-vision@0.10.35`
-- Files changed:
-  - `src/components/fitness/webcam-view.tsx` - Complete rewrite for new API
-  - `src/lib/pose-detection.ts` - Added drawSkeleton(), updated POSE_CONNECTIONS types
-  - `src/components/fitness/workout-history.tsx` - UI improvements
-- Verified: Page loads with no ChunkLoadError, tasks-vision bundle loads correctly
-
----
 ## Current Project Status
 
-**Status:** Working - Application is running and functional
-**Phase:** Initial build complete, ready for testing and polish
+**Status**: Development complete, server running, needs real-world testing with webcam
+**Stack**: Next.js 16.1.3 (Turbopack) + TypeScript + Tailwind CSS 4 + shadcn/ui + Prisma (SQLite)
+**Pose Engine**: @mediapipe/tasks-vision (v0.10.35) via CDN — Turbopack-safe
 
-### Current Goals / Completed Modifications
-- Full exercise rep counter with AI pose detection
-- 8 supported exercises across arms, legs, chest, and shoulders
-- Real-time webcam with skeleton overlay and joint highlighting
-- Rep counting with configurable target reps per set
-- Multi-set tracking
-- Calorie estimation per rep
-- Workout persistence via Prisma/SQLite
-- Workout history with stats overview
-- Sound feedback on rep completion
-- Responsive design for mobile and desktop
+---
+
+## Session 1 — Full Rebuild
+
+### Problem
+Previous version used `@mediapipe/pose` (legacy API) which caused **ChunkLoadError** with Turbopack:
+```
+Failed to load chunk node_modules_%40mediapipe_pose_pose_75185448.js
+```
+The legacy `@mediapipe/pose` package loads WASM files from local `node_modules`, which Turbopack's chunk splitting cannot handle properly.
+
+### Solution
+Migrated to `@mediapipe/tasks-vision` (v0.10.35) with CDN-based WASM loading:
+- WASM files loaded from `cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm`
+- Model file loaded from `storage.googleapis.com/mediapipe-models/...`
+- Dynamic import: `await import('@mediapipe/tasks-vision')` to avoid any bundling issues
+- Version pinned to 0.10.35 (not `@latest`) for stability
+
+### Completed Modifications
+
+1. **Database Schema** (`prisma/schema.prisma`):
+   - Removed unused User/Post models
+   - Workout model with: exerciseId, exerciseName, totalReps, totalSets, duration, calories, setsData, avgFormScore
+
+2. **Core Libraries**:
+   - `src/lib/pose-detection.ts` — Angle calculation (ported from Python angles.py), skeleton drawing with glow effects, posture analysis
+   - `src/lib/exercises.ts` — 10 exercises (8 original + wall sit + jumping jacks) with targetMuscles, estimatedDuration, tips
+   - `src/lib/rep-counter.ts` — State machine with form scoring (0-100), posture warnings, dynamic angle feedback
+
+3. **UI Components**:
+   - `src/components/fitness/webcam-view.tsx` — Step-by-step loading indicator, FPS counter, CDN-based PoseLandmarker init, fullscreen support, error handling for camera permissions
+   - `src/components/fitness/exercise-selector.tsx` — Category pills filter, animated cards, expanded detail view with tips/target muscles
+   - `src/components/fitness/rep-counter-display.tsx` — Gradient card, milestone celebrations (every 5 reps), form score display, progress bar with spring animation
+   - `src/components/fitness/workout-history.tsx` — Stats overview with 4 cards, form score gauge (SVG circle), delete workout support, sets breakdown
+
+4. **Main Page** (`src/app/page.tsx`):
+   - Three views: select / workout / history
+   - Rest timer between sets (configurable, default 30s) with full-screen overlay
+   - Target reps control (+/- 5)
+   - Sound toggle
+   - Double beep sound on target reached
+   - Workout saving with form score
+
+5. **API Routes** (`src/app/api/workouts/route.ts`):
+   - GET: List workouts (limit 100)
+   - POST: Create workout
+   - DELETE: Delete workout by id
 
 ### Verification Results
-- Dev server starts and compiles successfully
-- Page loads at GET / 200
-- ESLint passes with no errors
+- ESLint: Clean (0 errors, 0 warnings)
+- Server: Starts successfully, HTTP 200 on /
+- All imports resolve correctly
+- Prisma schema pushed and generated
 
-### Unresolved Issues / Risks
-- MediaPipe model loads from CDN - requires internet connection
-- Camera permissions need to be granted by user
-- Pose detection accuracy depends on lighting and camera angle
-- Sound may not work on all browsers without user interaction first
+### Architecture Decisions
+- **CDN over local WASM**: All MediaPipe WASM/model files loaded from CDN to avoid Turbopack chunk issues
+- **Pinned version**: Using @mediapipe/tasks-vision@0.10.35 (not @latest) to prevent breaking changes
+- **GPU delegate**: Using GPU acceleration for pose detection
+- **~15fps throttle**: Detection results throttled to prevent excessive state updates
+- **Spring animations**: Framer Motion spring physics for rep count changes
 
-### Priority Recommendations for Next Phase
-1. Test with actual camera and pose detection
-2. Add more polish to UI (animations, transitions)
-3. Add settings page for target reps, difficulty levels
-4. Add exercise tutorial animations/guides
-5. Consider adding workout timer with rest periods between sets
-6. Add data visualization (charts for weekly/monthly progress)
+---
+
+## Unresolved Issues / Risks
+
+1. **Camera testing**: Cannot be tested in sandbox environment. Needs real-world testing with webcam + user performing exercises.
+2. **GPU delegate fallback**: If GPU is not available, should fallback to CPU. Currently only GPU delegate is configured.
+3. **agent-browser compatibility**: The automated browser tool cannot access localhost in this environment. Manual QA needed.
+4. **Mobile camera**: Mobile browser camera access needs testing (getUserMedia + back camera).
+
+---
+
+## Priority Recommendations for Next Phase
+
+1. **Real-world testing**: Test camera + pose detection with actual exercises
+2. **GPU/CPU fallback**: Add try/catch for GPU delegate, fallback to CPU
+3. **Mobile optimization**: Test and optimize for mobile browsers
+4. **Dark mode**: Verify all components in dark mode
+5. **Performance**: Monitor memory usage during long workout sessions
+6. **Additional exercises**: Add more exercise types (planks, crunches, etc.)
+7. **Charts**: Add weekly/monthly workout charts to history view
+8. **Export**: Allow exporting workout history as CSV/PDF

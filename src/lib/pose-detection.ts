@@ -1,6 +1,6 @@
-// Pose detection engine - angle calculation and pose analysis
-// Ported from the original angles.py to TypeScript for browser use
-// Updated for @mediapipe/tasks-vision PoseLandmarker API
+// Pose detection engine - angle calculation and skeleton drawing
+// Ported from the original Python angles.py to TypeScript
+// Uses @mediapipe/tasks-vision PoseLandmarker API (Turbopack-safe via CDN)
 
 export interface Landmark {
   x: number;
@@ -11,39 +11,24 @@ export interface Landmark {
 
 /**
  * Calculate the angle between three landmarks (in degrees).
- * This is the TypeScript port of the original Python angles.py:
- * 
- * def calculate_angle(a, b, c):
- *     a = np.array(a)
- *     b = np.array(b)
- *     c = np.array(c)
- *     radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
- *     angle = np.abs(radians * 180.0 / np.pi)
- *     if angle > 180.0:
- *         angle = 360 - angle
- *     return angle
+ * Direct port of the Python angles.py:
+ *   radians = atan2(c[1]-b[1], c[0]-b[0]) - atan2(a[1]-b[1], a[0]-b[0])
+ *   angle = abs(radians * 180 / pi)
+ *   if angle > 180: angle = 360 - angle
  */
 export function calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
-  const aArr = { x: a.x, y: a.y };
-  const bArr = { x: b.x, y: b.y };
-  const cArr = { x: c.x, y: c.y };
-
   const radians =
-    Math.atan2(cArr.y - bArr.y, cArr.x - bArr.x) -
-    Math.atan2(aArr.y - bArr.y, aArr.x - bArr.x);
+    Math.atan2(c.y - b.y, c.x - b.x) -
+    Math.atan2(a.y - b.y, a.x - b.x);
 
   let angle = Math.abs(radians * (180.0 / Math.PI));
-
   if (angle > 180.0) {
     angle = 360 - angle;
   }
-
   return angle;
 }
 
-/**
- * Calculate the distance between two landmarks
- */
+/** Calculate the distance between two landmarks */
 export function calculateDistance(a: Landmark, b: Landmark): number {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
@@ -51,35 +36,26 @@ export function calculateDistance(a: Landmark, b: Landmark): number {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-/**
- * Check if a landmark is visible enough for reliable detection
- */
+/** Check if a landmark is visible enough for reliable detection */
 export function isLandmarkVisible(landmark: Landmark, threshold: number = 0.5): boolean {
   return (landmark.visibility || 0) >= threshold;
 }
 
-/**
- * Get specific landmarks by their indices from pose results
- */
+/** Get specific landmarks by their indices from pose results */
 export function getLandmarks(
   landmarks: Landmark[],
   indices: number[]
 ): Landmark[] | null {
   if (!landmarks || landmarks.length < 33) return null;
-  
+
   const result = indices.map(i => landmarks[i]);
-  
-  // Check visibility
   for (const lm of result) {
     if (!isLandmarkVisible(lm, 0.5)) return null;
   }
-  
   return result;
 }
 
-/**
- * Calculate the average angle from both sides (for bilateral exercises)
- */
+/** Calculate the average angle from both sides (for bilateral exercises) */
 export function getAverageAngle(
   landmarks: Landmark[],
   primaryIndices: { first: number; mid: number; end: number },
@@ -90,7 +66,6 @@ export function getAverageAngle(
     primaryIndices.mid,
     primaryIndices.end,
   ]);
-
   if (!primary) return null;
 
   const primaryAngle = calculateAngle(primary[0], primary[1], primary[2]);
@@ -101,7 +76,6 @@ export function getAverageAngle(
       secondaryIndices.mid,
       secondaryIndices.end,
     ]);
-
     if (secondary) {
       const secondaryAngle = calculateAngle(secondary[0], secondary[1], secondary[2]);
       return (primaryAngle + secondaryAngle) / 2;
@@ -111,9 +85,7 @@ export function getAverageAngle(
   return primaryAngle;
 }
 
-/**
- * Analyze body posture alignment
- */
+/** Analyze body posture alignment */
 export function analyzePosture(landmarks: Landmark[]): {
   isUpright: boolean;
   shoulderLevel: number;
@@ -138,11 +110,7 @@ export function analyzePosture(landmarks: Landmark[]): {
   };
 }
 
-/**
- * Pose landmark connections for drawing skeleton on canvas.
- * Each pair is [startLandmarkIndex, endLandmarkIndex].
- * Compatible with MediaPipe Pose Landmarker 33-landmark model.
- */
+/** Pose landmark connections for drawing skeleton on canvas */
 export const POSE_CONNECTIONS: [number, number][] = [
   // Torso
   [11, 12], [11, 23], [12, 24], [23, 24],
@@ -164,9 +132,7 @@ export const POSE_CONNECTIONS: [number, number][] = [
   [15, 17], [15, 19], [15, 21], [16, 18], [16, 20], [16, 22],
 ];
 
-/**
- * Draw the skeleton on a canvas context.
- */
+/** Draw the skeleton on a canvas context */
 export function drawSkeleton(
   ctx: CanvasRenderingContext2D,
   landmarks: Landmark[],
@@ -184,13 +150,13 @@ export function drawSkeleton(
 ) {
   const {
     connections = POSE_CONNECTIONS,
-    connectionColor = '#22c55e',
-    connectionWidth = 3,
-    landmarkColor = '#22c55e',
+    connectionColor = '#10b981',
+    connectionWidth = 4,
+    landmarkColor = '#34d399',
     landmarkRadius = 3,
     highlightIndices,
-    highlightColor = '#ef4444',
-    highlightRadius = 7,
+    highlightColor = '#f43f5e',
+    highlightRadius = 8,
     mirror = true,
   } = options || {};
 
@@ -203,10 +169,9 @@ export function drawSkeleton(
     v: lm.visibility || 0,
   });
 
-  // Draw connections
-  ctx.strokeStyle = connectionColor;
-  ctx.lineWidth = connectionWidth;
+  // Draw connections with gradient
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
   for (const [a, b] of connections) {
     const lmA = landmarks[a];
@@ -217,11 +182,20 @@ export function drawSkeleton(
     const pA = toCanvas(lmA);
     const pB = toCanvas(lmB);
 
+    // Check if this connection involves highlighted landmarks
+    const isHighlighted = highlightIndices?.has(a) || highlightIndices?.has(b);
+
+    ctx.strokeStyle = isHighlighted ? highlightColor : connectionColor;
+    ctx.lineWidth = isHighlighted ? connectionWidth + 2 : connectionWidth;
+    ctx.globalAlpha = isHighlighted ? 1 : 0.7;
+
     ctx.beginPath();
     ctx.moveTo(pA.x, pA.y);
     ctx.lineTo(pB.x, pB.y);
     ctx.stroke();
   }
+
+  ctx.globalAlpha = 1;
 
   // Draw landmarks
   for (let i = 0; i < landmarks.length; i++) {
@@ -232,18 +206,22 @@ export function drawSkeleton(
     const isHighlight = highlightIndices?.has(i);
 
     if (isHighlight) {
-      // Glow effect for highlighted landmarks
+      // Outer glow
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, highlightRadius + 8);
+      gradient.addColorStop(0, highlightColor + '66');
+      gradient.addColorStop(1, highlightColor + '00');
       ctx.beginPath();
-      ctx.arc(p.x, p.y, highlightRadius + 4, 0, 2 * Math.PI);
-      ctx.fillStyle = highlightColor + '33'; // semi-transparent
+      ctx.arc(p.x, p.y, highlightRadius + 8, 0, 2 * Math.PI);
+      ctx.fillStyle = gradient;
       ctx.fill();
 
+      // Inner circle
       ctx.beginPath();
       ctx.arc(p.x, p.y, highlightRadius, 0, 2 * Math.PI);
       ctx.fillStyle = highlightColor;
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     } else {
       ctx.beginPath();
@@ -254,9 +232,7 @@ export function drawSkeleton(
   }
 }
 
-/**
- * Key landmark indices for skeleton highlighting
- */
+/** Key landmark indices for skeleton highlighting */
 export const KEY_LANDMARKS = {
   nose: 0,
   leftShoulder: 11,
