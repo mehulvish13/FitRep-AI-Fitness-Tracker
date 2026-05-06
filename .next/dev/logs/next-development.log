@@ -1,3 +1,7 @@
-[00:00:02.969] Server  LOG     ✓ Ready in 2.2s
-[00:00:08.357] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:09.426] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE 1=1 ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
+[00:00:04.425] Server  LOG     ✓ Ready in 3.4s
+[00:00:07.685] Server  LOG     ○ Compiling / ...
+[00:00:10.257] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:11.072] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE 1=1 ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
+[00:01:47.298] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:47.526] Server  LOG     prisma:query "SELECT 1"
+[00:01:47.527] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE 1=1 ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"

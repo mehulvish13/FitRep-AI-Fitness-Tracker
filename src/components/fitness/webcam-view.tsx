@@ -312,6 +312,15 @@ export default function WebcamView({
     return () => { stopCamera(); };
   }, [stopCamera]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!fullscreen) {
@@ -378,6 +387,7 @@ export default function WebcamView({
           <Button
             onClick={startCamera}
             size="lg"
+            aria-label="Start camera preview"
             className="mt-6 bg-emerald-600 hover:bg-emerald-500 text-white px-8 h-12 text-sm font-semibold rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200 hover:shadow-emerald-500/40 hover:scale-[1.02]"
           >
             <Camera className="w-4 h-4 mr-2" />
@@ -467,6 +477,7 @@ export default function WebcamView({
               variant="secondary"
               size="icon"
               className="bg-black/60 hover:bg-black/80 text-white border-0 backdrop-blur-md h-8 w-8 rounded-lg"
+              aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'}
               onClick={toggleFullscreen}
             >
               {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

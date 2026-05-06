@@ -70,6 +70,8 @@ function ThemeToggle() {
       variant="ghost"
       size="icon"
       className="h-8 w-8"
+      aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     >
       {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -411,7 +413,10 @@ export default function FitnessRepCounter() {
   // Delete workout
   const handleDeleteWorkout = useCallback(async (id: string) => {
     try {
-      await fetch(`/api/workouts?id=${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/workouts?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error('Delete request failed');
+      }
       setWorkouts(prev => prev.filter(w => w.id !== id));
       toast.success('Workout deleted.');
     } catch {
@@ -493,6 +498,7 @@ export default function FitnessRepCounter() {
               size="icon"
               className="h-8 w-8"
               onClick={() => setSoundEnabled(!soundEnabled)}
+              aria-label={soundEnabled ? 'Mute workout sounds' : 'Enable workout sounds'}
               title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
@@ -842,6 +848,7 @@ export default function FitnessRepCounter() {
                       <span className="text-xs text-muted-foreground font-medium">Target reps:</span>
                       <div className="flex items-center gap-1">
                         <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                          aria-label="Decrease target reps"
                           onClick={() => setTargetReps(Math.max(1, targetReps - 5))}>
                           <ChevronLeft className="w-3 h-3" />
                         </Button>
@@ -849,6 +856,7 @@ export default function FitnessRepCounter() {
                           onChange={(e) => setTargetReps(Math.max(1, parseInt(e.target.value) || 1))}
                           className="w-14 h-7 text-center text-sm rounded-lg" />
                         <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                          aria-label="Increase target reps"
                           onClick={() => setTargetReps(targetReps + 5)}>
                           <ChevronRight className="w-3 h-3" />
                         </Button>
@@ -858,6 +866,7 @@ export default function FitnessRepCounter() {
                       <span className="text-xs text-muted-foreground font-medium">Sets:</span>
                       <div className="flex items-center gap-1">
                         <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                          aria-label="Decrease target sets"
                           onClick={() => setTargetSets(Math.max(1, targetSets - 1))}>
                           <ChevronLeft className="w-3 h-3" />
                         </Button>
@@ -865,6 +874,7 @@ export default function FitnessRepCounter() {
                           onChange={(e) => setTargetSets(Math.max(1, parseInt(e.target.value) || 1))}
                           className="w-12 h-7 text-center text-sm rounded-lg" />
                         <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                          aria-label="Increase target sets"
                           onClick={() => setTargetSets(targetSets + 1)}>
                           <ChevronRight className="w-3 h-3" />
                         </Button>

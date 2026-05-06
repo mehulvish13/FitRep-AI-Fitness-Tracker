@@ -31,6 +31,15 @@ interface WorkoutHistoryProps {
   streak?: { current: number; best: number };
 }
 
+function parseSetsData(setsData: string): number[] {
+  try {
+    const parsed = JSON.parse(setsData || '[]');
+    return Array.isArray(parsed) ? parsed.filter((v): v is number => typeof v === 'number') : [];
+  } catch {
+    return [];
+  }
+}
+
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -207,7 +216,7 @@ export default function WorkoutHistory({ workouts, onDelete, streak }: WorkoutHi
               <AnimatePresence mode="popLayout">
                 {workouts.map((workout, index) => {
                   const config = exerciseConfig[workout.exerciseId] || { icon: '🎯', color: 'bg-gray-100 dark:bg-gray-800 text-gray-600' };
-                  const sets: number[] = JSON.parse(workout.setsData || '[]');
+                  const sets = parseSetsData(workout.setsData);
                   return (
                     <motion.div
                       key={workout.id}
@@ -276,6 +285,7 @@ export default function WorkoutHistory({ workouts, onDelete, streak }: WorkoutHi
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 flex-shrink-0"
+                                aria-label={`Delete ${workout.exerciseName} workout`}
                                 onClick={() => onDelete(workout.id)}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
