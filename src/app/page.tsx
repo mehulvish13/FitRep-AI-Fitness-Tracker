@@ -53,7 +53,7 @@ function formatTime(seconds: number): string {
 
 function useHasMounted() {
   return useSyncExternalStore(
-    (cb) => { cb(); return () => {}; },
+    (cb) => { cb(); return () => { }; },
     () => true,
     () => false,
   );
@@ -218,8 +218,8 @@ export default function FitnessRepCounter() {
   useEffect(() => {
     fetch('/api/workouts')
       .then(res => res.json())
-      .then(data => setWorkouts(data || []))
-      .catch(() => {});
+      .then((data) => setWorkouts(Array.isArray(data) ? data : []))
+      .catch(() => { });
   }, []);
 
   // Main workout timer
@@ -293,7 +293,7 @@ export default function FitnessRepCounter() {
     prevRepsRef.current = newState.reps;
   }, [selectedExercise, isWorkoutActive, counterState, playSound, targetReps]);
 
-  const handleFrame = useCallback((_video: HTMLVideoElement) => {}, []);
+  const handleFrame = useCallback((_video: HTMLVideoElement) => { }, []);
 
   // Start workout
   const startWorkout = useCallback((exercise: ExerciseConfig) => {
@@ -664,11 +664,10 @@ export default function FitnessRepCounter() {
                         {personalRecords.slice(0, 3).map((record, i) => (
                           <div key={record.exerciseId} className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className={`text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${
-                                i === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                i === 1 ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' :
-                                'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-                              }`}>
+                              <span className={`text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${i === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                  i === 1 ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' :
+                                    'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                                }`}>
                                 {i === 0 ? '1' : i === 1 ? '2' : '3'}
                               </span>
                               <span className="text-xs text-muted-foreground truncate">{record.exerciseName}</span>
