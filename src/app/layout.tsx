@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FitRep Counter — AI-Powered Exercise Rep Counter",
+  title: "FitRep – AI Tracker",
   description: "Track your exercise reps in real-time with AI-powered pose detection. Supports bicep curls, squats, push-ups, and more.",
   keywords: ["fitness", "exercise", "rep counter", "pose detection", "AI", "workout", "MediaPipe"],
   authors: [{ name: "FitRep Team" }],
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "FitRep Counter — AI-Powered Exercise Rep Counter",
+title: "FitRep – AI Tracker",
     description: "Track your exercise reps in real-time with AI-powered pose detection.",
     type: "website",
   },

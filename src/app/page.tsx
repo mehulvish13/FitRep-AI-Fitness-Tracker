@@ -479,7 +479,7 @@ export default function FitnessRepCounter() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-600/20">
               <Dumbbell className="w-4 h-4 text-white" />
             </div>
-            <h1 className="font-bold text-lg tracking-tight">FitRep Counter</h1>
+            <h1 className="font-bold text-lg tracking-tight">FitRep – AI Tracker</h1>
             <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-medium hidden sm:inline-flex">
               AI Powered
             </Badge>
@@ -965,7 +965,7 @@ export default function FitnessRepCounter() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Dumbbell className="w-3 h-3" />
-              <span className="font-medium">FitRep Counter</span>
+              <span className="font-medium">FitRep – AI Tracker</span>
               <span className="hidden sm:inline">— AI-Powered Exercise Rep Counter</span>
             </div>
             <div className="flex items-center gap-3">
