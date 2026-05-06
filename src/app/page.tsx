@@ -671,8 +671,8 @@ export default function FitnessRepCounter() {
                           <div key={record.exerciseId} className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className={`text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${i === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                  i === 1 ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' :
-                                    'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                                i === 1 ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' :
+                                  'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
                                 }`}>
                                 {i === 0 ? '1' : i === 1 ? '2' : '3'}
                               </span>
