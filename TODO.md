@@ -1,0 +1,7 @@
+- [ ] Step 1: Add SessionProvider wrapper for NextAuth sessions (layout.tsx + provider component)
+- [ ] Step 2: Add NextAuth credentials auth route: src/app/api/auth/[...nextauth]/route.ts
+- [ ] Step 3: Update Prisma schema with NextAuth models + link Workout to User
+- [ ] Step 4: Add auth UI on marketing page: src/app/landing/page.tsx (login + sign-up forms)
+- [ ] Step 5: Protect app: add middleware.ts and move existing fitness UI to /app (src/app/app/page.tsx). Make / redirect to /landing.
+- [ ] Step 6: Make workouts user-scoped in src/app/api/workouts/route.ts (GET/POST/DELETE require session)
+- [ ] Step 7: Validate build/lint + run prisma generate

@@ -30,6 +30,24 @@ export interface ExerciseConfig {
 
 export const EXERCISES: ExerciseConfig[] = [
   {
+    id: 'jumping-jacks',
+    name: 'Jumping Jacks',
+    description: 'Start standing, jump feet apart while raising arms overhead, then return.',
+    icon: '⭐',
+    category: 'legs',
+    difficulty: 'beginner',
+    primaryJoints: ['Right Shoulder', 'Left Shoulder'],
+    landmarks: { first: 12, mid: 14, end: 16 },
+    secondaryLandmarks: { first: 11, mid: 13, end: 15 },
+    downAngle: 150,
+    upAngle: 30,
+    bilateral: true,
+    tips: ['Land softly on balls of feet', 'Pump arms vigorously', 'Keep core engaged', 'Maintain steady rhythm'],
+    caloriesPerRep: 0.4,
+    estimatedDuration: '30s',
+    targetMuscles: ['Full Body', 'Shoulders', 'Calves', 'Core'],
+  },
+  {
     id: 'bicep-curl',
     name: 'Bicep Curl',
     description: 'Keep elbows close to your torso, curl the weight up to shoulder level.',

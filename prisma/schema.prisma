@@ -7,8 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  // Credentials auth fields
+  passwordSalt String
+  passwordHash String
+  passwordIv   String?
+  createdAt    DateTime  @default(now())
+
+  workouts Workout[]
+
+  // NextAuth-required relations (even if using CredentialsProvider)
+  accounts Account[]
+  sessions Session[]
+
+  @@map("User")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token    String?
+  access_token     String?
+  expires_at       Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("Account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("VerificationToken")
+}
+
 model Workout {
   id           String   @id @default(cuid())
+  userId       String
   exerciseId   String
   exerciseName String
   totalReps    Int      @default(0)
@@ -18,4 +78,9 @@ model Workout {
   setsData     String   @default("[]")
   avgFormScore Float    @default(0)
   createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("Workout")
 }

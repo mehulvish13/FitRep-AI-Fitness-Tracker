@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo, useSyncExternalStore } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +16,7 @@ import {
   Trophy, ChevronLeft, ChevronRight, Volume2, VolumeX,
   Info, Activity, Zap, Heart, Timer, Target, Flame, Shield, Sparkles,
   Sun, Moon, Download, Award, TrendingUp, Calendar, FlameKindling,
-  Settings, Layers, ArrowRight, Home,
+  Settings, Layers, ArrowRight, Home, User, LogOut,
 } from 'lucide-react';
 import WebcamView from '@/components/fitness/webcam-view';
 import ExerciseSelector from '@/components/fitness/exercise-selector';
@@ -187,6 +189,8 @@ function isPersonalBest(exerciseId: string, totalReps: number, workouts: Workout
 }
 
 export default function FitnessRepCounter() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [view, setView] = useState<AppView>('select');
   const [selectedExercise, setSelectedExercise] = useState<ExerciseConfig | null>(null);
@@ -204,6 +208,12 @@ export default function FitnessRepCounter() {
   const [showSettings, setShowSettings] = useState(false);
   const [summaryData, setSummaryData] = useState<WorkoutSummaryData | null>(null);
   const mounted = useHasMounted();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/landing');
+    }
+  }, [status, router]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -512,6 +522,35 @@ export default function FitnessRepCounter() {
               <History className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">History</span>
             </Button>
+            {session?.user && (
+              <div className="relative group">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-lg gap-2 px-2 sm:px-3"
+                >
+                  <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                    <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="hidden sm:inline text-sm font-medium">
+                    {session.user.name || session.user.email?.split('@')[0] || 'User'}
+                  </span>
+                </Button>
+                <div className="absolute right-0 top-full mt-1 w-48 py-1 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                    <p className="text-sm font-medium truncate">{session.user.name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                  </div>
+                  <button
+                    onClick={() => { signOut({ callbackUrl: '/landing' }); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>

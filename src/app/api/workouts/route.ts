@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { db } from '@/lib/db';
 
-// GET /api/workouts - Get all workouts
+// GET /api/workouts - Get all workouts for current user
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id;
     const workouts = await db.workout.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -18,11 +27,18 @@ export async function GET() {
 // POST /api/workouts - Save a new workout
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id;
     const body = await request.json();
     const { exerciseId, exerciseName, totalReps, totalSets, duration, calories, setsData, avgFormScore } = body;
 
     const workout = await db.workout.create({
       data: {
+        userId,
         exerciseId,
         exerciseName,
         totalReps: totalReps || 0,
@@ -44,6 +60,11 @@ export async function POST(request: Request) {
 // DELETE /api/workouts - Delete a workout by id
 export async function DELETE(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

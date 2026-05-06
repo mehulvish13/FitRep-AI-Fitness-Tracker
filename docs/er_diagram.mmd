@@ -1,0 +1,59 @@
+erDiagram
+  USER {
+    String id PK "cuid()"
+    String email UNIQUE
+    String name
+    String passwordSalt
+    String passwordHash
+    String passwordIv
+    DateTime createdAt
+  }
+
+  ACCOUNT {
+    String id PK
+    String userId FK
+    String type
+    String provider
+    String providerAccountId
+    String refresh_token
+    String access_token
+    Int expires_at
+    String token_type
+    String scope
+    String id_token
+    String session_state
+  }
+
+  SESSION {
+    String id PK
+    String sessionToken UNIQUE
+    String userId FK
+    DateTime expires
+  }
+
+  VERIFICATIONTOKEN {
+    String identifier
+    String token UNIQUE
+    DateTime expires
+  }
+
+  WORKOUT {
+    String id PK
+    String userId FK
+    String exerciseId
+    String exerciseName
+    Int totalReps
+    Int totalSets
+    Int duration
+    Float calories
+    String setsData
+    Float avgFormScore
+    DateTime createdAt
+  }
+
+  USER ||--o{ ACCOUNT : has
+  USER ||--o{ SESSION : has
+  USER ||--o{ WORKOUT : has
+  ACCOUNT }o--|| USER : "belongs to"
+  SESSION }o--|| USER : "belongs to"
+  WORKOUT }o--|| USER : "belongs to"
