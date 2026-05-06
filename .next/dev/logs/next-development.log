@@ -1,7 +1,7 @@
-[00:00:04.425] Server  LOG     ✓ Ready in 3.4s
-[00:00:07.685] Server  LOG     ○ Compiling / ...
-[00:00:10.257] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:11.072] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE 1=1 ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
-[00:01:47.298] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:47.526] Server  LOG     prisma:query "SELECT 1"
-[00:01:47.527] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE 1=1 ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
+[00:00:03.215] Server  LOG     ✓ Ready in 2.3s
+[00:00:20.097] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:20.831] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE 1=1 ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
+[00:00:53.924] Browser LOG     I0506 08:39:13.811000 2136208 gl_context.cc:407] GL version: 3.0 (OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium))), renderer: WebKit WebGL
+[00:00:53.924] Browser WARN    W0506 08:39:13.828000 2136208 gl_context.cc:1118] OpenGL error checking is disabled
+[00:00:53.924] Browser LOG     Graph successfully started running.
+[00:01:02.473] Browser WARN    W0506 08:39:22.259000 2136208 landmark_projection_calculator.cc:81] Using NORM_RECT without IMAGE_DIMENSIONS is only supported for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.
