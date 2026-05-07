@@ -3970,10 +3970,6 @@
     --cell-size: calc(var(--spacing) * 8);
   }
 
-  .paused {
-    animation-play-state: paused;
-  }
-
   .group-focus-within\/menu-item\:opacity-100:is(:where(.group\/menu-item):focus-within *) {
     opacity: 1;
   }
