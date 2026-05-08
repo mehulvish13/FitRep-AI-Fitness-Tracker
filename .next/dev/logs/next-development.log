@@ -1,0 +1,4 @@
+[00:00:02.558] Server  LOG     ✓ Ready in 1848ms
+[00:00:04.098] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:06.039] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`userId`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE `main`.`Workout`.`userId` = ? ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
+[00:00:13.801] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
