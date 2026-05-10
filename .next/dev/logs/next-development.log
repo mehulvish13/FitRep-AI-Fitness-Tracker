@@ -1,4 +1,20 @@
-[00:00:02.558] Server  LOG     ✓ Ready in 1848ms
-[00:00:04.098] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:06.039] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`userId`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE `main`.`Workout`.`userId` = ? ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
-[00:00:13.801] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:04.883] Server  LOG     ✓ Ready in 3.8s
+[00:00:08.863] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:12.334] Browser WARN    Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[01:04:48.763] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:04:56.002] Browser WARN    Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[01:05:15.272] Server  LOG     prisma:query "SELECT `main`.`Workout`.`id`, `main`.`Workout`.`userId`, `main`.`Workout`.`exerciseId`, `main`.`Workout`.`exerciseName`, `main`.`Workout`.`totalReps`, `main`.`Workout`.`totalSets`, `main`.`Workout`.`duration`, `main`.`Workout`.`calories`, `main`.`Workout`.`setsData`, `main`.`Workout`.`avgFormScore`, `main`.`Workout`.`createdAt` FROM `main`.`Workout` WHERE `main`.`Workout`.`userId` = ? ORDER BY `main`.`Workout`.`createdAt` DESC LIMIT ? OFFSET ?"
+[01:15:29.307] Browser LOG     I0509 04:36:41.880999 2136208 gl_context.cc:407] GL version: 3.0 (OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium))), renderer: WebKit WebGL
+[01:15:29.308] Browser WARN    W0509 04:36:41.881999 2136208 gl_context.cc:1118] OpenGL error checking is disabled
+[01:15:29.308] Browser LOG     Graph successfully started running.
+[01:15:35.241] Browser WARN    W0509 04:36:47.656000 2136208 landmark_projection_calculator.cc:81] Using NORM_RECT without IMAGE_DIMENSIONS is only supported for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.
+[01:16:25.742] Browser LOG     Graph finished closing successfully.
+[01:16:25.743] Browser LOG     I0509 04:37:38.300000 2136208 gl_context_webgl.cc:140] Successfully destroyed WebGL context with handle 1
+[01:16:37.779] Browser LOG     I0509 04:37:50.336999 2136208 gl_context.cc:407] GL version: 3.0 (OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium))), renderer: WebKit WebGL
+[01:16:37.780] Browser WARN    W0509 04:37:50.352999 2136208 gl_context.cc:1118] OpenGL error checking is disabled
+[01:16:37.780] Browser LOG     Graph successfully started running.
+[01:16:40.922] Browser WARN    W0509 04:37:53.352999 2136208 landmark_projection_calculator.cc:81] Using NORM_RECT without IMAGE_DIMENSIONS is only supported for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.
+[01:17:49.208] Server  LOG     prisma:query "SELECT 1"
+[01:17:49.228] Server  LOG     prisma:query "INSERT INTO `main`.`Workout` (`id`, `userId`, `exerciseId`, `exerciseName`, `totalReps`, `totalSets`, `duration`, `calories`, `setsData`, `avgFormScore`, `createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING `id` AS `id`, `userId` AS `userId`, `exerciseId` AS `exerciseId`, `exerciseName` AS `exerciseName`, `totalReps` AS `totalReps`, `totalSets` AS `totalSets`, `duration` AS `duration`, `calories` AS `calories`, `setsData` AS `setsData`, `avgFormScore` AS `avgFormScore`, `createdAt` AS `createdAt`"
+[01:17:50.588] Browser LOG     Graph finished closing successfully.
+[01:17:50.588] Browser LOG     I0509 04:39:03.129999 2136208 gl_context_webgl.cc:140] Successfully destroyed WebGL context with handle 1
